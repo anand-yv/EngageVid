@@ -1,0 +1,5 @@
+# Set default behavior to automatically normalize line endings.
+* text=auto
+
+# Force LF (Unix) line endings for JSON files
+*.json text eol=lf
