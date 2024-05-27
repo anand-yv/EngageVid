@@ -119,8 +119,8 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 
     const options = {
-        httpOnly: true,
-        secure: true,
+        httpOnly: false,
+        secure: false,
         // Since cokkie can be modified by client but if we make this two true it can only be modified 
         // by server but it can be read by client.
     }
