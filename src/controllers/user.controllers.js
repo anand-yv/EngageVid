@@ -2,8 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.models.js";
-import { uplodaOnCloudinary } from "../utils/cloudinary.js";
-import { response } from "express";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 
 const genrateAccessAndRefreshTokens = async (userId) => {
@@ -14,12 +13,11 @@ const genrateAccessAndRefreshTokens = async (userId) => {
         const accessToken = user.generateAccessToken();
 
         user.refreshToken = refreshToken;
-        await User.save({ validateBeforeSave: false });
-
+        await user.save({ validateBeforeSave: false });
         return { refreshToken, accessToken };
 
     } catch (error) {
-        return new ApiError(500, "Internal Server Error");
+        throw new ApiError(500, "Internal Server Error");
     }
 }
 
@@ -60,12 +58,11 @@ const registerUser = asyncHandler(async (req, res) => {
 
     let coverImageLocalPath;
     if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
-        coverImageLocalPath = req.files.coverImage[0];
+        coverImageLocalPath = req.files.coverImage[0].path;
     }
 
-    const avatar = await uplodaOnCloudinary(avatarLocalPath);
-    const coverImage = await uplodaOnCloudinary(coverImageLocalPath);
-
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
 
     if (!avatar) {
@@ -98,10 +95,9 @@ const loginUser = asyncHandler(async (req, res) => {
     // if username/email exist check password matches or not
     // generate access and refresh  token
     // send cookie
-
     const { username, email, password } = req.body;
-    if (!username || !email) {
-        return new ApiError(400, "Username or Email is required");
+    if (!username && !email) {
+        throw new ApiError(400, "Username or Email is required");
     }
 
     const user = await User.findOne({
@@ -109,12 +105,12 @@ const loginUser = asyncHandler(async (req, res) => {
     });
 
     if (!user) {
-        return new ApiError(403, "User doesnot exist");
+        throw new ApiError(403, "User doesnot exist");
     }
 
     const isPasswordValid = await user.isPasswordCorrect(password);
     if (!isPasswordValid) {
-        return new ApiError(401, "Invalid User Credentials.");
+        throw new ApiError(401, "Invalid User Credentials.");
     }
 
     const { accessToken, refreshToken } = await genrateAccessAndRefreshTokens(user._id);
@@ -125,14 +121,14 @@ const loginUser = asyncHandler(async (req, res) => {
     const options = {
         httpOnly: true,
         secure: true,
-        // Since cokkie can be modified by clien but if we make this two tru it can only be modified 
+        // Since cokkie can be modified by client but if we make this two true it can only be modified 
         // by server but it can be read by client.
     }
 
 
     return res.status(200)
         .cookie("accessToken", accessToken, options)
-        .cokkie("refreshToken", refreshToken, options)
+        .cookie("refreshToken", refreshToken, options)
         .json(
             new ApiResponse(200,
                 {
