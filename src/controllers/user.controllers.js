@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import jwt from "jsonwebtoken";
 
 
 const genrateAccessAndRefreshTokens = async (userId) => {
@@ -164,6 +165,45 @@ const logoutUser = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(200, {}, "User is logged out.")
         )
-})
+});
 
-export { registerUser, loginUser, logoutUser };
+const refreshToken = asyncHandler(async (req, res) => {
+    const incomingRefreshToken = req.cookies?.refreshToken || req.headers["authorization"]?.replace("Bearer ", "");
+    if (!incomingRefreshToken) {
+        throw new ApiError(401, "Unauthorize Request");
+    }
+
+    try {
+        const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const user = await User.findById(decodedToken?._id);
+        if (!user) {
+            throw new ApiError(401, "Invlaid Access Token");
+        }
+        console.log(incomingRefreshToken, " ===", user.refreshToken);
+        if (incomingRefreshToken !== user.refreshToken) {
+            throw new ApiError(403, "Refresh Token is Expired or used");
+        }
+
+        const options = {
+            httpOnly: true,
+            secure: true,
+        }
+        console.log(user._id);
+        const { refreshToken: newRefreshToken, accessToken } = await genrateAccessAndRefreshTokens(user._id);
+        console.log(accessToken, newRefreshToken);
+        return res.status(200)
+            .cookie("accessToken", accessToken, options)
+            .cookie("refreshToken", newRefreshToken, options)
+            .json(
+                new ApiResponse(200, {
+                    accessToken,
+                    refreshToken: newRefreshToken
+                },
+                    "Access token refreshed.")
+            )
+    } catch (error) {
+        throw new ApiError(401, error?.message || "Invalid Refresh Token");
+    }
+});
+
+export { registerUser, loginUser, logoutUser, refreshToken };
