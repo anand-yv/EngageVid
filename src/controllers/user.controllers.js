@@ -234,13 +234,13 @@ const getCurrentUser = asyncHandler(async (req, res) => {
         .json(
             new ApiResponse(
                 200,
-                { user: req.user }
+                req.user,
+                "Current user fetched successfully"
             ),
-            "Current user fetched successfully"
         )
 });
 
-const uopdateAccountDetails = asyncHandler(async (req, res) => {
+const updateAccountDetails = asyncHandler(async (req, res) => {
     const { fullName, email } = req.body;
     if (!fullName || !email) {
         throw new ApiError(400, "All fields are required");
@@ -270,7 +270,7 @@ const uopdateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-    const avatarLocalPath = req.files?.path;
+    const avatarLocalPath = req.file?.path;
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar is required");
     }
@@ -298,7 +298,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-    const coverImageLocalPath = req.files?.path;
+    const coverImageLocalPath = req.file?.path;
     if (!coverImageLocalPath) {
         throw new ApiError(400, "Cover Image is required");
     }
@@ -333,7 +333,7 @@ export {
     refreshToken,
     changeCurrentPassword,
     getCurrentUser,
-    uopdateAccountDetails,
+    updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
 };
